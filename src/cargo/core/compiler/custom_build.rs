@@ -187,10 +187,11 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, &unit.pkg)?;
     let debug = unit.profile.debuginfo.is_turned_on();
+    let target_name = bcx.target_data.short_name(&unit.kind);
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
         .env("NUM_JOBS", &bcx.jobs().to_string())
-        .env("TARGET", bcx.target_data.short_name(&unit.kind))
+        .env("TARGET", target_name)
         .env("DEBUG", debug.to_string())
         .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
@@ -215,6 +216,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             "RUSTC_LINKER",
             linker.val.clone().resolve_program(bcx.config),
         );
+    }
+
+    if target_name.contains("ckb") {
+        cmd.env("CROSS_COMPILE", "riscv64-ckb-elf-");
     }
 
     if let Some(links) = unit.pkg.manifest().links() {
